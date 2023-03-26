@@ -1,5 +1,5 @@
 # chatgpt4productivitydemo
-We test the impact of chatGPT using GPT-4 on productivity and speed of development.
+We test the impact of chatGPT using GPT-4 on productivity and speed of development. Read the transcription.txt to see how it is performed.
 
 We will use ChatGPT to talk to, and copy the code it generates. We will guide it through our ideas and see how far we can go before talking to it becomes more work than doing it ourselves. GPT3 was great for boilerplate, but would lose threads rather soon and start making up procedures that were never defined, etc.
 
