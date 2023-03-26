@@ -1,0 +1,13 @@
+fileFormatVersion: 2
+guid: 00eee81dc781553469af0015544ed0c2
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - foodCreaturePrefab: {fileID: 6522113762555354509, guid: be38ad4e3da52fc429897d68509a92fe, type: 3}
+  - grazingCreaturePrefab: {fileID: 7390829940631844767, guid: 99980a6a9e3e3af48b280df592bc7548, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
