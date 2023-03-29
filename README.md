@@ -11,3 +11,6 @@ This is not a "ChatGPT" does everything project, instead we observe the impact o
 
 Some design ideas are intentional, for example, using 2d URP template, because I expect most tutorials to be on a basic render, and we can spot how often ChatGPT forgets this fact.
 Every time I refactor something, I will let it know, and we can see how often it forgets we refactored something.
+
+Current version
+https://foksieloy.name/bio-sim/v1/
