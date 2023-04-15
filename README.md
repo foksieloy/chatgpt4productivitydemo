@@ -13,4 +13,8 @@ Some design ideas are intentional, for example, using 2d URP template, because I
 Every time I refactor something, I will let it know, and we can see how often it forgets we refactored something.
 
 Current version
-https://foksieloy.name/bio-sim/v1/
+http://foksieloy.name/bio-sim/v2/
+
+Old versions
+http://foksieloy.name/bio-sim/v1/
+http://foksieloy.name/bio-sim/v0/
