@@ -8,7 +8,7 @@ public class CameraController : MonoBehaviour
     public float panSpeed = 20f;
     public float panBorderThickness = 10f;
     public float zoomSpeed = 500f;
-    public Vector2 zoomLimits = new Vector2(5f, 15f);
+    public Vector2 zoomLimits = new(5f, 15f);
 
     private Camera cam;
 
@@ -65,7 +65,8 @@ public class CameraController : MonoBehaviour
         // Panning with arrow keys
         float horizontal = Input.GetAxis("Horizontal");
         float vertical = Input.GetAxis("Vertical");
-        transform.position += new Vector3(horizontal, vertical, 0) * panSpeed * Time.deltaTime;
+        Vector3 localVector3 = new(horizontal, vertical, 0);
+        transform.position += panSpeed * Time.deltaTime * localVector3;
 
         // Center on the biggest GrazingCreature with a mouse click or touch input
         if ((Input.GetMouseButtonDown(0) || Input.GetKey(KeyCode.Space) || (Input.touchSupported && Input.touchCount == 1 && Input.GetTouch(0).phase == TouchPhase.Ended)) && !CheckPointerOverUI())
@@ -86,9 +87,9 @@ public class CameraController : MonoBehaviour
             foreach (GameObject hunterCreature in hunterCreatures)
             {
                 HunterCreatureController hunterController = hunterCreature.GetComponent<HunterCreatureController>();
-                if (hunterController.foodRating > maxFoodRating)
+                if (hunterController.FoodRating > maxFoodRating)
                 {
-                    maxFoodRating = hunterController.foodRating;
+                    maxFoodRating = hunterController.FoodRating;
                     biggestCreature = hunterCreature;
                 }
             }
@@ -98,9 +99,9 @@ public class CameraController : MonoBehaviour
             foreach (GameObject grazingCreature in grazingCreatures)
             {
                 GrazingCreatureController grazingController = grazingCreature.GetComponent<GrazingCreatureController>();
-                if (grazingController.foodRating > maxFoodRating)
+                if (grazingController.FoodRating > maxFoodRating)
                 {
-                    maxFoodRating = grazingController.foodRating;
+                    maxFoodRating = grazingController.FoodRating;
                     biggestCreature = grazingCreature;
                 }
             }
@@ -119,7 +120,7 @@ public class CameraController : MonoBehaviour
         GameObject biggestCreature = FindBiggestCreature();
         if (biggestCreature != null)
         {
-            Vector3 targetPosition = new Vector3(biggestCreature.transform.position.x, biggestCreature.transform.position.y, transform.position.z);
+            Vector3 targetPosition = new(biggestCreature.transform.position.x, biggestCreature.transform.position.y, transform.position.z);
             transform.position = targetPosition;
         }
     }

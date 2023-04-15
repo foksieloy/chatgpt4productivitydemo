@@ -1,37 +1,25 @@
 using System;
 using UnityEngine;
 
-public class FoodCreatureController : MonoBehaviour
+public class FoodCreatureController : PlantCreatureController
 {
-    public float growthRate = 0.05f;
-    public float maxSize = 2f;
-    public float minSpawnInterval = 600f; // 10 minutes
-    public float maxSpawnInterval = 20f;
-
-    private float spawnTimer;
-    private Renderer objectRenderer;
-
-    private BackgroundController backgroundController;
-
-    void Start()
+    new protected void Start()
     {
+        base.Start();
         objectRenderer = GetComponent<Renderer>();
         spawnTimer = GetRandomSpawnInterval();
         backgroundController = FindObjectOfType<BackgroundController>();
 
+        maxSize = 5.0f;
+        maxFoodRating = 200.0f;
+        growthRate = 0.5f;
     }
 
-    void Update()
+    new protected void Update()
     {
+        base.Update();
         GrowFoodCreature();
         SpawnSmallFoodCreature();
-    }
-
-    void UpdateColor()
-    {
-        float sizePercentage = transform.localScale.x / maxSize;
-        Color color = Color.Lerp(Color.Lerp(Color.green, Color.white, 0.5f), Color.Lerp(Color.green, Color.black, 0.5f), sizePercentage);
-        objectRenderer.material.color = color;
     }
 
     void GrowFoodCreature()
@@ -40,17 +28,9 @@ public class FoodCreatureController : MonoBehaviour
         {
             Color colorAtPosition = backgroundController.GetColorAtWorldPosition(transform.position);
             float growthMultiplier = Mathf.InverseLerp(0, 1, colorAtPosition.b); // Assuming more cyan means higher blue value
-            if (UnityEngine.Random.Range(0, 1) > 0.99)
-            {
-                Debug.Log("The color is: " + growthMultiplier.ToString());
-            }
-
 
             float growthAmount = growthRate * growthMultiplier * Time.deltaTime;
-            Vector3 newScale = transform.localScale + new Vector3(growthAmount, growthAmount, growthAmount);
-            newScale = Vector3.Min(newScale, new Vector3(maxSize, maxSize, maxSize));
-            transform.localScale = newScale;
-            UpdateColor();
+            FoodRating += growthAmount;
         }
     }
 

@@ -1,16 +1,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class GrazingCreatureController : MonoBehaviour
+public class GrazingCreatureController : AnimalCreatureController
 {
-    public float moveSpeed = 2f;
-    public float foodGrowthFactor = 0.1f;
+
     public float minDistanceToEat = 0.1f;
 
     private GameObject targetFoodCreature;
-    public float foodRating = 10f;
-
-    public float foodLossRate = 0.005f;
 
     public float minIdleTime = 2f;
     public float maxIdleTime = 5f;
@@ -20,19 +16,21 @@ public class GrazingCreatureController : MonoBehaviour
 
     public float hunterAwarenessRadius = 5f;
 
-    private Renderer objectRenderer;
-
-    void Start()
+    new protected void Start()
     {
+        base.Start();
         objectRenderer = GetComponent<Renderer>();
         idleTime = Random.Range(minIdleTime, maxIdleTime);
         lastPosition = transform.position;
-        Color color = Color.Lerp(Color.red, Color.black, 0.5f);
-        objectRenderer.material.color = color;
+        lightColor = Color.Lerp(Color.red, Color.white, 0.5f);
+        darkColor = Color.Lerp(Color.red, Color.black, 0.5f);
+        eatRate = 3f;
+        eatDistance = 1f;
     }
 
-    void Update()
+    new protected void Update()
     {
+        base.Update();
         if (targetFoodCreature == null)
         {
             FindClosestFoodCreature();
@@ -73,10 +71,11 @@ public class GrazingCreatureController : MonoBehaviour
             HunterCreatureController hunterController = closestHunter.GetComponent<HunterCreatureController>();
             GameObject targetedGrazingCreature = hunterController.target;
 
-            if (foodRating < 20)
+            if (FoodRating < 20)
             {
                 // Move away from the nearby hunter
-                transform.position += (transform.position - closestHunter.transform.position).normalized * moveSpeed * Time.deltaTime;
+                Transform localTransform = transform;
+                localTransform.position += moveSpeed * Time.deltaTime * (localTransform.position - closestHunter.transform.position).normalized;
             }
             else if (targetedGrazingCreature != null)
             {
@@ -94,7 +93,7 @@ public class GrazingCreatureController : MonoBehaviour
 
     void LoseFoodOverTime()
     {
-        foodRating -= foodLossRate * Time.deltaTime;
+        FoodRating -= foodLossRate * Time.deltaTime;
     }
 
     void CheckIdleTime()
@@ -133,7 +132,7 @@ public class GrazingCreatureController : MonoBehaviour
 
     void CheckSplit()
     {
-        if (foodRating >= 30f)
+        if (FoodRating >= 30f)
         {
             // Calculate a random spawn position within a small radius
             float spawnRadius = 4f;
@@ -142,22 +141,12 @@ public class GrazingCreatureController : MonoBehaviour
 
             // Instantiate the new GrazingCreature
             GameObject newGrazingCreature = Instantiate(gameObject, spawnPosition, Quaternion.identity);
-            newGrazingCreature.GetComponent<GrazingCreatureController>().foodRating = 10f;
+            newGrazingCreature.GetComponent<GrazingCreatureController>().FoodRating = 10f;
 
             // Reduce the food rating of the current creature
-            foodRating = 10f;
+            FoodRating = 10f;
         }
     }
-
-
-    void CheckDeath()
-    {
-        if (foodRating <= 0f)
-        {
-            Destroy(gameObject);
-        }
-    }
-
 
     void FindClosestFoodCreature()
     {
@@ -194,13 +183,13 @@ public class GrazingCreatureController : MonoBehaviour
     void CheckForEating()
     {
         float distance = Vector2.Distance(transform.position, targetFoodCreature.transform.position);
+        FoodCreatureController targetFoodCreatureController = targetFoodCreature.GetComponent<FoodCreatureController>();
         if (distance <= minDistanceToEat)
         {
-            float foodSize = targetFoodCreature.transform.localScale.x;
-            foodRating += foodSize;
+            float foodEaten = Mathf.Min(targetFoodCreatureController.FoodRating, eatRate * Time.deltaTime);
 
-            Destroy(targetFoodCreature);
-            targetFoodCreature = null;
+            targetFoodCreatureController.FoodRating -= foodEaten;
+            FoodRating += foodEaten;
         }
     }
 }

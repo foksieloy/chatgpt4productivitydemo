@@ -1,35 +1,29 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class HunterCreatureController : MonoBehaviour
+public class HunterCreatureController : AnimalCreatureController
 {
-    public float moveSpeed = 5f;
-    public float foodLossRate = 0.1f;
-    public float foodRating = 15f;
+ 
     private GameObject closestGrazingCreature;
-    private Renderer objectRenderer;
     public GameObject target;
-    public float eatDistance = 1f;
+    
     public GameObject hunterCreatureBodyPrefab;
 
-    private List<GameObject> bodyParts = new List<GameObject>();
-    private float minBodyPartDistance = 0.5f;
+    private readonly List<GameObject> bodyParts = new();
+    private readonly float minBodyPartDistance = 0.5f;
 
-    void Start()
+    new protected void Start()
     {
+        base.Start();
         objectRenderer = GetComponent<Renderer>();
-        Color color = Color.Lerp(Color.red, Color.white, 0.6f);
-        objectRenderer.material.color = color;
+        lightColor = new Color(0.2f, 0.2f, 0.2f);
+        darkColor = new Color(0.7f, 0.7f, 0.7f);
+        moveSpeed = 5;
     }
 
-    private Color GetColor()
+    new protected void Update()
     {
-        float colorLerpValue = Mathf.InverseLerp(0, 100, foodRating);
-        return Color.Lerp(Color.red, Color.white, colorLerpValue);
-    }
-
-    void Update()
-    {
+        base.Update();
         MoveTowardsClosestGrazingCreature();
         LoseFoodOverTime();
         CheckDeath();
@@ -39,8 +33,8 @@ public class HunterCreatureController : MonoBehaviour
 
     private void MoveBody()
     {
-        int targetBodyParts = Mathf.Clamp(Mathf.RoundToInt(foodRating / 10), 1, 10);
-        Color bodyPartColor = GetColor();
+        int targetBodyParts = Mathf.Clamp(Mathf.RoundToInt(FoodRating / 10), 1, 10);
+        _ = CurrentColor;
 
         while (bodyParts.Count < targetBodyParts)
         {
@@ -48,7 +42,7 @@ public class HunterCreatureController : MonoBehaviour
         }
         while (bodyParts.Count > targetBodyParts)
         {
-            GameObject lastBodyPart = bodyParts[bodyParts.Count - 1];
+            GameObject lastBodyPart = bodyParts[^1];
             bodyParts.Remove(lastBodyPart);
             Destroy(lastBodyPart);
         }
@@ -74,7 +68,7 @@ public class HunterCreatureController : MonoBehaviour
     private void AddBodyPart()
     {
         GameObject newBodyPart = Instantiate(hunterCreatureBodyPrefab, transform.position, Quaternion.identity);
-        Color color = Color.Lerp(Color.red, Color.white, 0.6f);
+        Color color = CurrentColor;
         newBodyPart.GetComponent<Renderer>().material.color = color;
         bodyParts.Add(newBodyPart);
     }
@@ -82,12 +76,12 @@ public class HunterCreatureController : MonoBehaviour
 
     private void CheckSplit()
     {
-        if (foodRating >= 100)
+        if (FoodRating >= 100)
         {
-            foodRating = 2;
+            FoodRating = 2;
             GameObject newHunterCreature = Instantiate(gameObject, transform.position + new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), 0), Quaternion.identity);
             HunterCreatureController newHunterCreatureController = newHunterCreature.GetComponent<HunterCreatureController>();
-            newHunterCreatureController.foodRating = 2;
+            newHunterCreatureController.FoodRating = 2;
 
             foreach (GameObject bodyPart in bodyParts)
             {
@@ -116,7 +110,7 @@ public class HunterCreatureController : MonoBehaviour
         foreach (GameObject grazingCreature in grazingCreatures)
         {
             GrazingCreatureController grazingCreatureController = grazingCreature.GetComponent<GrazingCreatureController>();
-            if (grazingCreatureController.foodRating > 20)
+            if (grazingCreatureController.FoodRating > 20)
             {
                 continue; // Skip GrazingCreatures with more than 20 food
             }
@@ -137,15 +131,7 @@ public class HunterCreatureController : MonoBehaviour
 
     void LoseFoodOverTime()
     {
-        foodRating -= foodLossRate * Time.deltaTime;
-    }
-
-    void CheckDeath()
-    {
-        if (foodRating <= 0f)
-        {
-            Destroy(gameObject);
-        }
+        FoodRating -= foodLossRate * Time.deltaTime;
     }
 
     private void TryToEatGrazingCreature(GrazingCreatureController grazingCreature)
@@ -155,9 +141,9 @@ public class HunterCreatureController : MonoBehaviour
         float distanceToGrazingCreature = Vector3.Distance(transform.position, grazingCreature.transform.position);
         if (distanceToGrazingCreature <= eatDistance)
         {
-            if (grazingCreature.foodRating <= 20)
+            if (grazingCreature.FoodRating <= 20)
             {
-                foodRating += grazingCreature.foodRating;
+                FoodRating += grazingCreature.FoodRating;
                 Destroy(grazingCreature.gameObject);
             }
         }

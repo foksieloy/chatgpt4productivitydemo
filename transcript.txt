@@ -1955,3 +1955,698 @@ private void MoveBody()
     }
 }
 Now, the body parts should have the same color as the rest of the HunterCreature based on its foodRating.
+
+
+I would like it so that grazing creature doesn't immediately move to closest food source. Instead, it should see in a cone in front of it, up to a short distance and scan the  area to spot food. If it doesn't see any, it should move in a zig zag matter till it spots food. Then, when food is spotted it should send an alert to any nearby grazing creatures that it found food, if those creatures are in a zig zag pattern, they drop it and move towards the grazing creature calling them.
+To implement the cone of vision and zig-zag movement for the GrazingCreature, follow these steps:
+
+Add new variables to GrazingCreatureController:
+csharp
+Copy code
+public float visionAngle = 90f;
+public float visionDistance = 5f;
+public float zigZagSpeed = 1f;
+public float zigZagFrequency = 1f;
+public float zigZagAmplitude = 1f;
+public float alertDistance = 5f;
+private Vector3 lastDirection;
+private bool zigZagging = false;
+Create a method to check if a FoodCreature is in the GrazingCreature's cone of vision:
+csharp
+Copy code
+private bool InVisionCone(GameObject target)
+{
+    Vector3 directionToTarget = (target.transform.position - transform.position).normalized;
+    float angleToTarget = Vector3.Angle(transform.up, directionToTarget);
+
+    return angleToTarget < visionAngle / 2 && Vector3.Distance(transform.position, target.transform.position) <= visionDistance;
+}
+Modify the Update() method to incorporate the zig-zag movement and vision cone logic:
+csharp
+Copy code
+void Update()
+{
+    if (!closestFoodCreature || !InVisionCone(closestFoodCreature))
+    {
+        FindClosestFoodCreature();
+    }
+
+    if (closestFoodCreature && InVisionCone(closestFoodCreature))
+    {
+        zigZagging = false;
+        MoveTowardsFoodCreature();
+
+        // Alert other GrazingCreatures nearby
+        AlertNearbyGrazingCreatures();
+    }
+    else
+    {
+        // Zig-zag movement
+        zigZagging = true;
+        ZigZagMove();
+    }
+
+    // Existing update code
+}
+Create the AlertNearbyGrazingCreatures() method:
+csharp
+Copy code
+private void AlertNearbyGrazingCreatures()
+{
+    Collider2D[] nearbyGrazingCreatures = Physics2D.OverlapCircleAll(transform.position, alertDistance, grazingCreatureLayer);
+
+    foreach (Collider2D nearbyGrazingCreatureCollider in nearbyGrazingCreatures)
+    {
+        GrazingCreatureController nearbyGrazingCreature = nearbyGrazingCreatureCollider.GetComponent<GrazingCreatureController>();
+        if (nearbyGrazingCreature && nearbyGrazingCreature.zigZagging)
+        {
+            nearbyGrazingCreature.FollowAlertingGrazingCreature(transform.position);
+        }
+    }
+}
+Create a method to follow the alerting grazing creature:
+csharp
+Copy code
+public void FollowAlertingGrazingCreature(Vector3 alertingGrazingCreaturePosition)
+{
+    zigZagging = false;
+    targetPosition = alertingGrazingCreaturePosition;
+}
+Create the ZigZagMove() method:
+csharp
+Copy code
+private void ZigZagMove()
+{
+    float offset = Mathf.Sin(Time.time * zigZagFrequency) * zigZagAmplitude;
+    Vector3 zigZagDirection = Quaternion.Euler(0, 0, offset) * lastDirection;
+    transform.position += zigZagDirection * zigZagSpeed * Time.deltaTime;
+    transform.up = zigZagDirection;
+    lastDirection = zigZagDirection;
+}
+Now, the GrazingCreature should perform a zig-zag movement when it doesn't see any FoodCreature and move towards the FoodCreature when it's in its cone of vision. Additionally, it alerts nearby GrazingCreatures when it finds food.
+
+
+
+
+
+Matija Prelec
+i would also like the cone to be visible as a very transparent red cone
+To visualize the cone of vision, you can create a transparent red cone using a sprite and some code to adjust its size and rotation. Follow these steps:
+
+Create a transparent red cone sprite in your favorite image editor. Make sure it's wide at the top and narrow at the bottom.
+
+Import the cone sprite to Unity and set its texture type to "Sprite (2D and UI)".
+
+Add a new variable to GrazingCreatureController to reference the cone sprite:
+
+csharp
+Copy code
+public GameObject visionConePrefab;
+Drag and drop the cone sprite prefab into the visionConePrefab field in the Unity editor.
+
+In the Start() method of GrazingCreatureController, instantiate the vision cone as a child of the GrazingCreature:
+
+csharp
+Copy code
+void Start()
+{
+    // Existing start code
+
+    GameObject visionCone = Instantiate(visionConePrefab, transform);
+    visionCone.transform.localPosition = Vector3.zero;
+}
+Create a new method to update the vision cone's size and rotation based on the visionDistance and visionAngle variables:
+csharp
+Copy code
+private void UpdateVisionCone(GameObject visionCone)
+{
+    visionCone.transform.localScale = new Vector3(visionDistance, visionDistance, 1);
+    visionCone.transform.localRotation = Quaternion.Euler(0, 0, -visionAngle / 2);
+}
+Call the UpdateVisionCone() method in the Update() method of GrazingCreatureController:
+csharp
+Copy code
+void Update()
+{
+    GameObject visionCone = transform.Find(visionConePrefab.name + "(Clone)").gameObject;
+    UpdateVisionCone(visionCone);
+
+    // Existing update code
+}
+Now, the GrazingCreature should have a visible red cone that represents its cone of vision.
+
+
+
+
+
+Matija Prelec
+At no point did we define a grazingCreatureLayer, nor defined a targetPosition used in followalerting procedure.
+Apologies for the oversight. Let's define the grazingCreatureLayer and targetPosition used in the FollowAlertingGrazingCreature() procedure.
+
+In the GrazingCreatureController, add a public LayerMask variable for the grazingCreatureLayer:
+csharp
+Copy code
+public LayerMask grazingCreatureLayer;
+In the Unity Editor, create a new layer called "GrazingCreature" and assign this layer to all your GrazingCreature prefabs.
+
+Select the GrazingCreature prefab in the Unity Editor, and in the GrazingCreatureController component, set the grazingCreatureLayer field to the "GrazingCreature" layer you just created.
+
+In the GrazingCreatureController, add a private Vector3 variable called targetPosition:
+
+csharp
+Copy code
+private Vector3 targetPosition;
+Modify the FollowAlertingGrazingCreature() method to update the targetPosition with the position of the alerting GrazingCreature:
+csharp
+Copy code
+private void FollowAlertingGrazingCreature()
+{
+    Collider2D[] nearbyGrazingCreatures = Physics2D.OverlapCircleAll(transform.position, alertRange, grazingCreatureLayer);
+
+    foreach (Collider2D grazingCreatureCollider in nearbyGrazingCreatures)
+    {
+        GrazingCreatureController grazingCreatureController = grazingCreatureCollider.GetComponent<GrazingCreatureController>();
+
+        if (grazingCreatureController != null && grazingCreatureController.alerted)
+        {
+            targetPosition = grazingCreatureController.transform.position;
+            MoveTowardsTarget(targetPosition);
+            break;
+        }
+    }
+}
+This should set up the grazingCreatureLayer and targetPosition correctly for the FollowAlertingGrazingCreature() procedure.
+
+
+
+
+
+Matija Prelec
+we never wrote the movetowardstarget function
+Apologies for the oversight. Let's create the MoveTowardsTarget() method in the GrazingCreatureController script.
+
+csharp
+Copy code
+private void MoveTowardsTarget(Vector3 target)
+{
+    Vector3 direction = (target - transform.position).normalized;
+    float step = moveSpeed * Time.deltaTime;
+    transform.position = Vector3.MoveTowards(transform.position, target, step);
+}
+This method takes a Vector3 target parameter, calculates the direction to the target, and then moves the GrazingCreature towards the target at a specified moveSpeed. The Time.deltaTime factor ensures smooth movement across different frame rates.
+
+Now, you can call the MoveTowardsTarget() method in the FollowAlertingGrazingCreature() method as shown in my previous response.
+
+
+
+
+
+Matija Prelec
+while moving in zig zag, the creatures should also rotate to help spot food
+To make the creatures rotate while moving in a zig-zag pattern, you can add rotation logic to the ZigZagMovement() method. Here's an updated version of the ZigZagMovement() method that includes rotation:
+
+csharp
+Copy code
+private void ZigZagMovement()
+{
+    if (zigzagTimer <= 0)
+    {
+        zigzagTimer = zigzagDuration;
+        float randomAngle = Random.Range(-maxZigzagAngle, maxZigzagAngle);
+        zigzagDirection = Quaternion.Euler(0, 0, randomAngle) * transform.up;
+    }
+    else
+    {
+        zigzagTimer -= Time.deltaTime;
+    }
+
+    float step = moveSpeed * Time.deltaTime;
+    transform.position += zigzagDirection * step;
+
+    // Add rotation logic here
+    float rotationSpeed = 60f; // Adjust this value to control the rotation speed
+    transform.Rotate(0, 0, rotationSpeed * Time.deltaTime);
+}
+The line transform.Rotate(0, 0, rotationSpeed * Time.deltaTime); adds rotation to the GrazingCreature while it's moving in a zig-zag pattern. The rotationSpeed variable determines how fast the creature rotates. You can adjust this value to control the rotation speed.
+
+
+
+
+
+Matija Prelec
+this rotates the creature but not the cone, the cone should also rotate and the creature should update what it sees as it rotates
+To rotate the cone and update the visible food within the cone as the creature rotates, you can do the following:
+
+Rotate the cone object along with the creature's rotation.
+Update the visible food within the cone as the creature rotates.
+First, let's modify the ZigZagMovement() method to include the rotation of the cone object. Assuming you have a reference to the cone object, add the same rotation logic to the cone:
+
+csharp
+Copy code
+public GameObject coneObject; // Make sure to assign this reference in the Unity Editor
+// ...
+private void ZigZagMovement()
+{
+    // ...
+    // Add rotation logic for the creature and the cone
+    float rotationSpeed = 60f; // Adjust this value to control the rotation speed
+    transform.Rotate(0, 0, rotationSpeed * Time.deltaTime);
+    coneObject.transform.Rotate(0, 0, rotationSpeed * Time.deltaTime);
+}
+Now, update the method responsible for finding visible food within the cone to recheck visible food each frame. Modify the Update() method in the GrazingCreatureController to call the FindVisibleFood() method each frame:
+
+csharp
+Copy code
+private void Update()
+{
+    if (!alerted)
+    {
+        FindVisibleFood();
+        if (visibleFood != null)
+        {
+            MoveTowardsTarget(visibleFood.transform.position);
+        }
+        else
+        {
+            ZigZagMovement();
+        }
+    }
+    else
+    {
+        FollowAlertingGrazingCreature();
+    }
+}
+This way, the creature will update what it sees as it rotates since the FindVisibleFood() method will be called each frame, allowing the creature to detect new food sources within its cone of vision.
+
+
+
+
+
+Matija Prelec
+        GameObject visionCone = transform.Find(visionConePrefab.name + "(Clone)").gameObject line will not work since we have multiple grazing creatures. modify it so that a grazing creature has its own cone and reference that
+You can assign the vision cone as a child of the GrazingCreature and store a reference to it in the GrazingCreatureController script. Modify the GrazingCreatureController script to include a reference to the vision cone:
+
+csharp
+Copy code
+public class GrazingCreatureController : MonoBehaviour
+{
+    public GameObject visionConePrefab;
+    private GameObject visionCone; // Add this variable to store a reference to the vision cone
+
+    // ...
+}
+In the Start() method of the GrazingCreatureController, instantiate the vision cone as a child of the GrazingCreature and assign the reference to the visionCone variable:
+
+csharp
+Copy code
+void Start()
+{
+    // ...
+    visionCone = Instantiate(visionConePrefab, transform.position, Quaternion.identity, transform);
+}
+Now, modify the ZigZagMovement() method to rotate the vision cone along with the GrazingCreature:
+
+csharp
+Copy code
+private void ZigZagMovement()
+{
+    // ...
+    // Add rotation logic for the creature and the cone
+    float rotationSpeed = 60f; // Adjust this value to control the rotation speed
+    transform.Rotate(0, 0, rotationSpeed * Time.deltaTime);
+    visionCone.transform.Rotate(0, 0, rotationSpeed * Time.deltaTime);
+}
+With these changes, each GrazingCreature will have its own vision cone, and the script will keep track of the correct reference for each creature.
+
+
+
+
+
+Matija Prelec
+Sorry compadre, the zig zag cone of vision feature is not working out. Let us debug it together. I will be describing the situation as the game runs and you give me possible solutions. Lets go step by step, and not rush ahead. At the moment the creatures are not visible, just cones, i guess the origin is not correct. Most creatures just stand there not moving. Others move without ever moving towards food, just in a line. Let me know when you are ready.
+I'm ready to help. Let's start with the first issue, the creatures not being visible and only cones being shown. To fix this, we need to make sure the cones are properly instantiated as a child of the GrazingCreature and placed correctly.
+
+First, verify that the GrazingCreature prefab and the vision cone prefab both have their origins set to the center of their respective objects. This can be checked and adjusted in the Unity Editor by selecting each prefab and making sure the pivot point is at the center.
+Next, in the Start() method of the GrazingCreatureController script, instantiate the vision cone as a child of the GrazingCreature and set its local position to the origin of the GrazingCreature:
+csharp
+Copy code
+void Start()
+{
+    // ...
+    visionCone = Instantiate(visionConePrefab, Vector3.zero, Quaternion.identity, transform);
+    visionCone.transform.localPosition = Vector3.zero;
+}
+Now let's address the second issue, where most creatures are standing still and not moving. We'll need to look into the Update() method of the GrazingCreatureController script to make sure they are using the correct movement logic:
+
+Ensure that the Update() method is called for all GrazingCreatures, and they are executing the appropriate movement behavior (zigzag movement, following alerts, or moving towards food).
+Double-check the conditions for each movement behavior to make sure they are being triggered correctly. For example, if a creature is not in the alert state and hasn't spotted food, it should default to the zigzag movement behavior.
+Finally, let's tackle the issue of creatures moving in a straight line without ever moving towards food. We need to make sure the vision cone is correctly detecting food and updating the GrazingCreature's behavior:
+
+Verify that the vision cone's collider is correctly set up as a trigger, and the script for detecting food is attached to the vision cone object.
+Make sure the vision cone's script is properly communicating with the GrazingCreatureController script to update the creature's target position and movement behavior when food is detected.
+Please go through these steps, and let me know if you need further assistance or if you encounter any other issues.
+
+
+
+
+
+Matija Prelec
+First, the cone is a triangle 2d object, sprite with default triangle resource. Do we still use middle as origin?
+Apologies for the confusion. Since the cone is a 2D triangle sprite, you should set the origin (pivot point) to the base of the triangle, at the center. This will allow the cone to rotate correctly around the GrazingCreature when the creature rotates.
+
+To set the origin, follow these steps:
+
+In the Unity Editor, click on the vision cone prefab to select it.
+In the Inspector, click on the Sprite Renderer component.
+Click on the small circle next to the Sprite field to open the Sprite Selector.
+In the Sprite Selector, click on the gear icon (⚙️) at the top right corner and choose "Edit Sprite".
+In the Sprite Editor, click on the Pivot dropdown menu and choose "Custom".
+Now, move the blue pivot point to the center of the base of the triangle.
+Click "Apply" and then close the Sprite Editor.
+Now, the vision cone should rotate correctly around the GrazingCreature when the creature rotates.
+
+
+
+
+
+Matija Prelec
+There is no gear icon. I assume because it is a default sprite from Unity.
+My apologies for the confusion. If the vision cone is using a default sprite from Unity, you won't be able to edit the pivot point directly in the Sprite Editor.
+
+In this case, you can create a new empty GameObject as a child of the GrazingCreature and position it at the base of the triangle. Then, make the vision cone a child of this new empty GameObject. By doing this, you can rotate the empty GameObject instead of the vision cone, which will effectively change the pivot point to the base of the triangle.
+
+To implement this solution, follow these steps:
+
+In the Unity Editor, click on the vision cone prefab to select it.
+In the Hierarchy, right-click on the GrazingCreature and select "Create Empty" to create a new empty GameObject as a child of the GrazingCreature.
+Rename the new empty GameObject to something like "VisionConePivot".
+Position the VisionConePivot GameObject at the center of the base of the vision cone sprite.
+Make the vision cone a child of the VisionConePivot GameObject. To do this, click and drag the vision cone GameObject onto the VisionConePivot GameObject in the Hierarchy.
+Update the script to rotate the VisionConePivot GameObject instead of the vision cone.
+Now, when you rotate the VisionConePivot GameObject, the vision cone will rotate correctly around the GrazingCreature.
+
+
+
+
+
+Matija Prelec
+due to a number of bugs, let's pivot. I have reverted all the code from the point of asking about vision cones and zig zag movement.
+Alright, let's take a different approach. Please let me know what you'd like to work on next or if you want to implement a different solution for the GrazingCreature's behavior. I'm here to help!
+
+
+
+
+
+Matija Prelec
+Let's refactor the creatures. They currently share quite a bit of code, so let us implement a hierarchy of inheritance. Have a global creature, and inherited by plant creatures and animal creatures. then let's have the food creature be a child of plant creature, and grazing and hunting creature children of animal creatures. move all code that is similar enough to parents and parametrize it so we do not have so much duplication.
+To refactor the code and create a hierarchy of inheritance, follow these steps:
+
+Create a new script called Creature. This script will contain the common functionality shared by all creatures.
+In the Creature script, implement the common functionality, such as movement, growth, and splitting. You can use virtual methods and properties to allow child classes to override specific behavior if needed.
+Create two new scripts called PlantCreature and AnimalCreature. These scripts will inherit from the Creature class.
+In the PlantCreature script, implement plant-specific functionality. You can override the virtual methods and properties from the Creature class if needed.
+In the AnimalCreature script, implement animal-specific functionality. You can override the virtual methods and properties from the Creature class if needed.
+Update the FoodCreature, GrazingCreature, and HunterCreature scripts to inherit from PlantCreature and AnimalCreature accordingly.
+Make FoodCreature inherit from PlantCreature.
+Make GrazingCreature and HunterCreature inherit from AnimalCreature.
+Remove any duplicate code from the FoodCreature, GrazingCreature, and HunterCreature scripts that are now handled by their parent classes. Make sure to call the base class's methods when necessary using the base keyword.
+Test your changes to ensure that the creatures still behave as expected with the new inheritance hierarchy.
+Here's an example of how the scripts could look:
+
+Creature script:
+
+csharp
+Copy code
+public class Creature : MonoBehaviour
+{
+    // Shared functionality and properties
+    
+    protected virtual void Move()
+    {
+        // Implement common movement logic
+    }
+    
+    protected virtual void Grow()
+    {
+        // Implement common growth logic
+    }
+    
+    protected virtual void Split()
+    {
+        // Implement common splitting logic
+    }
+}
+PlantCreature script:
+
+csharp
+Copy code
+public class PlantCreature : Creature
+{
+    // Plant-specific functionality and properties
+    
+    protected override void Grow()
+    {
+        // Implement plant-specific growth logic
+        base.Grow(); // Call base class's method if necessary
+    }
+}
+AnimalCreature script:
+
+csharp
+Copy code
+public class AnimalCreature : Creature
+{
+    // Animal-specific functionality and properties
+    
+    protected override void Move()
+    {
+        // Implement animal-specific movement logic
+        base.Move(); // Call base class's method if necessary
+    }
+}
+FoodCreature script:
+
+csharp
+Copy code
+public class FoodCreature : PlantCreature
+{
+    // FoodCreature-specific functionality and properties
+}
+GrazingCreature script:
+
+csharp
+Copy code
+public class GrazingCreature : AnimalCreature
+{
+    // GrazingCreature-specific functionality and properties
+}
+HunterCreature script:
+
+csharp
+Copy code
+public class HunterCreature : AnimalCreature
+{
+    // HunterCreature-specific functionality and properties
+}
+After refactoring, test your game to ensure everything still works as expected. Make any necessary adjustments to account for the new inheritance hierarchy.
+
+
+
+
+
+Matija Prelec
+
+3 / 3
+
+Refactor the creature counter in the UI to go over any creature like object. Have it dynamically determine the name from object type and create a list of all objects that are children of Creature.
+To refactor the creature counter in the UI to dynamically determine the name from the object type and create a list of all objects that are children of Creature, follow these steps:
+
+In the UIController script (or whichever script you are using to manage the UI), add a Dictionary<string, int> to store the count of each creature type.
+csharp
+Copy code
+private Dictionary<string, int> creatureCounts = new Dictionary<string, int>();
+Create a new method called UpdateCreatureCounts that will update the dictionary with the current counts of each creature type.
+csharp
+Copy code
+private void UpdateCreatureCounts()
+{
+    // Reset the counts
+    creatureCounts.Clear();
+
+    // Find all objects that are children of Creature
+    Creature[] creatures = FindObjectsOfType<Creature>();
+
+    // Iterate through the creatures and update the count for each creature type
+    foreach (Creature creature in creatures)
+    {
+        string typeName = creature.GetType().Name;
+
+        if (creatureCounts.ContainsKey(typeName))
+        {
+            creatureCounts[typeName]++;
+        }
+        else
+        {
+            creatureCounts[typeName] = 1;
+        }
+    }
+}
+Modify the method responsible for updating the UI to display the creature counts using the updated dictionary.
+csharp
+Copy code
+private void UpdateCreatureCountUI()
+{
+    UpdateCreatureCounts();
+
+    string countText = "";
+
+    foreach (KeyValuePair<string, int> entry in creatureCounts)
+    {
+        countText += entry.Key + ": " + entry.Value + "\n";
+    }
+
+    // Update the UI text element with the countText
+    // (Assuming you have a Text, TextMeshPro, or similar component to display the text)
+    creatureCountText.text = countText;
+}
+Call the UpdateCreatureCountUI() method in the Update() method of the UIController script (or whichever script you are using to manage the UI).
+csharp
+Copy code
+private void Update()
+{
+    UpdateCreatureCountUI();
+}
+Now, the creature counter in the UI should dynamically display the count of all objects that are children of Creature, and the counts will be updated as creatures are created and destroyed in the game.
+
+
+
+
+
+Matija Prelec
+Change the animal creature to have a eat rate, then modify the grazing creature to instead of instantly destroying the food creature, reduce the food creature foodrating at a rate of about 1 per second, making the food creature smaller and destroying it on reaching 0 food. The grazing creature will slowly gain food at the same rate.
+To implement the eat rate for animal creatures and modify the grazing creature to reduce the food creature's food rating, follow these steps:
+
+In the AnimalCreature script, add a new public float called eatRate. This will be the rate at which animal creatures consume food.
+csharp
+Copy code
+public float eatRate = 1f;
+In the GrazingCreature script, update the Update() method to consume food from the target food creature at the specified eat rate, and destroy it once the food rating reaches 0.
+csharp
+Copy code
+private void Update()
+{
+    // ... (other Update code)
+
+    if (targetFoodCreature != null)
+    {
+        float foodEaten = Mathf.Min(targetFoodCreature.foodRating, eatRate * Time.deltaTime);
+
+        targetFoodCreature.foodRating -= foodEaten;
+        foodRating += foodEaten;
+
+        // Update the target food creature's size and color
+        targetFoodCreature.UpdateSizeAndColor();
+
+        // Destroy the food creature if its food rating reaches 0
+        if (targetFoodCreature.foodRating <= 0f)
+        {
+            Destroy(targetFoodCreature.gameObject);
+            targetFoodCreature = null;
+        }
+    }
+}
+In the FoodCreature script, add a new method called UpdateSizeAndColor() to update the food creature's size and color based on its current food rating.
+csharp
+Copy code
+public void UpdateSizeAndColor()
+{
+    float currentSize = Mathf.Lerp(minSize, maxSize, foodRating / initialFoodRating);
+    transform.localScale = new Vector3(currentSize, currentSize, currentSize);
+
+    float colorLerpValue = Mathf.InverseLerp(minSize, maxSize, currentSize);
+    Color newColor = Color.Lerp(lightColor, darkColor, colorLerpValue);
+    GetComponent<Renderer>().material.color = newColor;
+}
+Finally, call the UpdateSizeAndColor() method in the FoodCreature script's Start() method to initialize the size and color correctly.
+csharp
+Copy code
+private void Start()
+{
+    // ... (other Start code)
+
+    UpdateSizeAndColor();
+}
+Now, the grazing creature will slowly consume the food creature's food rating, reducing its size and changing its color, and destroying it when the food rating reaches 0. The grazing creature will gain food at the same rate it consumes the food creature's food rating.
+
+
+
+
+
+Matija Prelec
+i am getting the following message in unity hub, what could be wrong? The same field name is serialized multiple times in the class or its parent class. This is not supported: Base(FoodCreatureController) maxSpawnInterval
+
+The error message you're encountering is caused by having the same serialized field name in both the child and parent classes. Unity doesn't support serializing fields with the same name in the inheritance hierarchy.
+
+To fix this issue, you should remove the duplicate serialized field from the child class (in this case, FoodCreatureController) and use the field from the parent class (PlantCreature) instead. If you need to set a different default value for the child class, you can do so in the Start() or Awake() methods.
+
+First, find the maxSpawnInterval field in the FoodCreatureController script and remove it.
+csharp
+Copy code
+// Remove this line from FoodCreatureController
+[SerializeField] private float maxSpawnInterval = 600f;
+In the PlantCreature script, ensure that the maxSpawnInterval field is protected (or public) so it's accessible by child classes.
+csharp
+Copy code
+// In PlantCreature
+[SerializeField] protected float maxSpawnInterval = 600f;
+In the FoodCreatureController script, set the default value for maxSpawnInterval in the Awake() or Start() method.
+csharp
+Copy code
+private void Start()
+{
+    maxSpawnInterval = 600f;
+    // ... (other Start code)
+}
+Now, the FoodCreatureController script will use the maxSpawnInterval field from its parent class PlantCreature, and the error should be resolved.
+
+
+
+
+
+Matija Prelec
+In the FoodCreatureGeneratorScript we had a method SpawnFoodCreature that would set the color and size randomly, but since we refactored we now use the grow method to do that. Can you modify the spawnfoodcreature so it now sets the initial food rating randomly? Since we use gameobject it is not accessible to set.
+Sure, let's modify the SpawnFoodCreature method in the FoodCreatureGeneratorScript to set the initial foodRating randomly for the newly created FoodCreature objects.
+
+First, make sure the foodRating field in the FoodCreatureController script is accessible by other scripts. You can do this by making the field public or by creating a public method to set it.
+csharp
+Copy code
+// In FoodCreatureController
+[SerializeField] private float foodRating = 0f;
+
+// Add this method to set the foodRating from another script
+public void SetFoodRating(float value)
+{
+    foodRating = value;
+}
+Now, modify the SpawnFoodCreature method in the FoodCreatureGeneratorScript to set the initial foodRating randomly.
+csharp
+Copy code
+private void SpawnFoodCreature()
+{
+    // ... (previous code for creating FoodCreature)
+
+    // Set the initial foodRating randomly
+    float initialFoodRating = Random.Range(minFoodRating, maxFoodRating);
+    newFoodCreature.GetComponent<FoodCreatureController>().SetFoodRating(initialFoodRating);
+
+    // ... (other code if needed)
+}
+In this code snippet, minFoodRating and maxFoodRating are the minimum and maximum values for the initial food rating of the spawned food creatures. Make sure to define these values in your script.
+
+Now, when a new FoodCreature is spawned, its initial foodRating will be set randomly within the defined range.
+
+
+
+
+
+
